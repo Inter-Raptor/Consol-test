@@ -30,8 +30,6 @@
 #include "targets/vmu/config.h"
 #elif defined(RG_TARGET_CROKPOCKET)
 #include "targets/crokpocket/config.h"
-#elif defined(RG_TARGET_CONSOL_TEST)
-#include "targets/consol-test/config.h"
 #elif defined(RG_TARGET_REDROID_GO)
 #include "targets/redroid-go/config.h"
 #else
