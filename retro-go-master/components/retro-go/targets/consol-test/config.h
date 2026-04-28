@@ -24,18 +24,24 @@
 #define RG_SCREEN_WIDTH             240
 #define RG_SCREEN_HEIGHT            320
 #define RG_SCREEN_ROTATE            0
-#define RG_SCREEN_VISIBLE_AREA      {0, 0, 0, 0}
-#define RG_SCREEN_SAFE_AREA         {0, 0, 0, 0}
+#define RG_SCREEN_VISIBLE_AREA      {0, 80, 240, 320}
+#define RG_SCREEN_SAFE_AREA         {0, 80, 240, 320}
 #define RG_SCREEN_INIT() \
     ILI9341_CMD(0x01); \
-    ILI9341_DELAY(150); \
     ILI9341_CMD(0x11); \
-    ILI9341_DELAY(150); \
     ILI9341_CMD(0x3A, 0x55); \
     ILI9341_CMD(0x36, 0x00); \
+    ILI9341_CMD(0xB2, 0x0C, 0x0C, 0x00, 0x33, 0x33); \
+    ILI9341_CMD(0xB7, 0x35); \
+    ILI9341_CMD(0xBB, 0x19); \
+    ILI9341_CMD(0xC0, 0x2C); \
+    ILI9341_CMD(0xC2, 0x01); \
+    ILI9341_CMD(0xC3, 0x12); \
+    ILI9341_CMD(0xC4, 0x20); \
+    ILI9341_CMD(0xC6, 0x0F); \
+    ILI9341_CMD(0xD0, 0xA4, 0xA1); \
     ILI9341_CMD(0x21); \
-    ILI9341_CMD(0x29); \
-    ILI9341_DELAY(50);
+    ILI9341_CMD(0x29);
 
 // Input
 #define RG_GAMEPAD_GPIO_MAP {\
