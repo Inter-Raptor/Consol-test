@@ -18,8 +18,8 @@
 #define RG_SCREEN_HOST              SPI2_HOST
 #define RG_SCREEN_SPEED             SPI_MASTER_FREQ_40M // SPI_MASTER_FREQ_80M
 #define RG_SCREEN_BACKLIGHT         1
-#define RG_SCREEN_WIDTH             320
-#define RG_SCREEN_HEIGHT            240
+#define RG_SCREEN_WIDTH             240
+#define RG_SCREEN_HEIGHT            320
 #define RG_SCREEN_ROTATE            0
 #define RG_SCREEN_VISIBLE_AREA      {0, 0, 0, 0}
 #define RG_SCREEN_SAFE_AREA         {0, 0, 0, 0}
@@ -41,7 +41,8 @@
     ILI9341_CMD(0xF2, 0x00);                 /* 3Gamma Function Disable */                                       \
     ILI9341_CMD(0x26, 0x01);                 /* Gamma curve selected */                                          \
     ILI9341_CMD(0xE0, 0x0F, 0x31, 0x2B, 0x0C, 0x0E, 0x08, 0x4E, 0xF1, 0x37, 0x07, 0x10, 0x03, 0x0E, 0x09, 0x00); \
-    ILI9341_CMD(0xE1, 0x00, 0x0E, 0x14, 0x03, 0x11, 0x07, 0x31, 0xC1, 0x48, 0x08, 0x0F, 0x0C, 0x31, 0x36, 0x0F);
+    ILI9341_CMD(0xE1, 0x00, 0x0E, 0x14, 0x03, 0x11, 0x07, 0x31, 0xC1, 0x48, 0x08, 0x0F, 0x0C, 0x31, 0x36, 0x0F); \
+    ILI9341_CMD(0x21);                 /* inversion ON */
 
 
 // Input
@@ -70,16 +71,17 @@
 
 
 // Status LED
-#define RG_GPIO_LED                 GPIO_NUM_38
+#define RG_GPIO_LED                 GPIO_NUM_NC
 
 // SPI Display (back up working)
 #define RG_GPIO_LCD_MISO            GPIO_NUM_NC
-#define RG_GPIO_LCD_MOSI            GPIO_NUM_12
-#define RG_GPIO_LCD_CLK             GPIO_NUM_48
+#define RG_GPIO_LCD_MOSI            GPIO_NUM_39
+#define RG_GPIO_LCD_CLK             GPIO_NUM_40
 #define RG_GPIO_LCD_CS              GPIO_NUM_NC
-#define RG_GPIO_LCD_DC              GPIO_NUM_47
-#define RG_GPIO_LCD_BCKL            GPIO_NUM_39
-#define RG_GPIO_LCD_RST             GPIO_NUM_3
+#define RG_GPIO_LCD_DC              GPIO_NUM_38
+#define RG_GPIO_LCD_RST             GPIO_NUM_41
+#define RG_GPIO_LCD_BCKL            GPIO_NUM_42
+#define RG_GPIO_LCD_BCKL_INVERT
 
 #define RG_GPIO_SDSPI_MISO          GPIO_NUM_9
 #define RG_GPIO_SDSPI_MOSI          GPIO_NUM_11
