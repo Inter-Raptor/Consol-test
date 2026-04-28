@@ -75,7 +75,7 @@
 #define RG_GPIO_LCD_CS              GPIO_NUM_NC
 #define RG_GPIO_LCD_DC              GPIO_NUM_38
 #define RG_GPIO_LCD_BCKL            GPIO_NUM_42
-#define RG_GPIO_LCD_BCKL_INVERT
+// #define RG_GPIO_LCD_BCKL_INVERT
 #define RG_GPIO_LCD_RST             GPIO_NUM_41
 
 // SD Card (SDMMC 1-bit mode)
