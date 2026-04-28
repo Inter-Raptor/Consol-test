@@ -22,7 +22,7 @@
 #define RG_SCREEN_SPEED             SPI_MASTER_FREQ_40M
 #define RG_SCREEN_BACKLIGHT         1
 #define RG_SCREEN_WIDTH             240
-#define RG_SCREEN_HEIGHT            240
+#define RG_SCREEN_HEIGHT            320
 #define RG_SCREEN_ROTATE            0
 #define RG_SCREEN_VISIBLE_AREA      {0, 0, 0, 0}
 #define RG_SCREEN_SAFE_AREA         {0, 0, 0, 0}
@@ -66,7 +66,7 @@
 #define RG_GPIO_POWER_SWITCH        GPIO_NUM_2
 
 // Status LED
-#define RG_GPIO_LED                 GPIO_NUM_38
+#define RG_GPIO_LED                 GPIO_NUM_NC
 
 // SPI Display
 #define RG_GPIO_LCD_MISO            GPIO_NUM_NC
