@@ -11,8 +11,11 @@
 #define RG_AUDIO_USE_EXT_DAC        1   // 0 = Disable, 1 = Enable
 
 // Board-specific
-#define RG_GPIO_POWER_CTRL          GPIO_NUM_NC
-#define RG_CUSTOM_PLATFORM_INIT()
+#define RG_GPIO_POWER_CTRL          GPIO_NUM_1
+#define RG_CUSTOM_PLATFORM_INIT()                             \
+    gpio_set_direction(RG_GPIO_POWER_CTRL, GPIO_MODE_OUTPUT); \
+    gpio_set_level(RG_GPIO_POWER_CTRL, 1);                    \
+    rg_task_delay(50);
 
 // Video (ST7789)
 #define RG_SCREEN_DRIVER            0   // 0 = ILI9341/ST7789
