@@ -11,10 +11,8 @@
 #define RG_AUDIO_USE_EXT_DAC        1   // 0 = Disable, 1 = Enable
 
 // Board-specific
-#define RG_GPIO_POWER_CTRL          GPIO_NUM_1
-#define RG_CUSTOM_PLATFORM_INIT()                             \
-    gpio_set_direction(RG_GPIO_POWER_CTRL, GPIO_MODE_OUTPUT); \
-    gpio_set_level(RG_GPIO_POWER_CTRL, 1);
+#define RG_GPIO_POWER_CTRL          GPIO_NUM_NC
+#define RG_CUSTOM_PLATFORM_INIT()
 
 // Video (ST7789)
 #define RG_SCREEN_DRIVER            0   // 0 = ILI9341/ST7789
@@ -23,23 +21,14 @@
 #define RG_SCREEN_BACKLIGHT         1
 #define RG_SCREEN_WIDTH             240
 #define RG_SCREEN_HEIGHT            320
-#define RG_SCREEN_ROTATE            0
+#define RG_SCREEN_ROTATE            1
 #define RG_SCREEN_VISIBLE_AREA      {0, 80, 240, 320}
 #define RG_SCREEN_SAFE_AREA         {0, 80, 240, 320}
 #define RG_SCREEN_INIT() \
     ILI9341_CMD(0x01); \
     ILI9341_CMD(0x11); \
     ILI9341_CMD(0x3A, 0x55); \
-    ILI9341_CMD(0x36, 0x00); \
-    ILI9341_CMD(0xB2, 0x0C, 0x0C, 0x00, 0x33, 0x33); \
-    ILI9341_CMD(0xB7, 0x35); \
-    ILI9341_CMD(0xBB, 0x19); \
-    ILI9341_CMD(0xC0, 0x2C); \
-    ILI9341_CMD(0xC2, 0x01); \
-    ILI9341_CMD(0xC3, 0x12); \
-    ILI9341_CMD(0xC4, 0x20); \
-    ILI9341_CMD(0xC6, 0x0F); \
-    ILI9341_CMD(0xD0, 0xA4, 0xA1); \
+    ILI9341_CMD(0x36, 0x70); \
     ILI9341_CMD(0x21); \
     ILI9341_CMD(0x29);
 
@@ -60,7 +49,7 @@
 }
 
 // Optional dedicated power switch exposed as MENU shortcut
-#define RG_GPIO_POWER_SWITCH        GPIO_NUM_2
+#define RG_GPIO_POWER_SWITCH        GPIO_NUM_NC
 
 // Status LED
 #define RG_GPIO_LED                 GPIO_NUM_NC
