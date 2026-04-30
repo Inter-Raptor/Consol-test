@@ -1,3 +1,4 @@
+
 // Target definition
 #define RG_TARGET_NAME              "CONSOL-TEST"
 
@@ -14,7 +15,8 @@
 #define RG_GPIO_POWER_CTRL          GPIO_NUM_1
 #define RG_CUSTOM_PLATFORM_INIT()                             \
     gpio_set_direction(RG_GPIO_POWER_CTRL, GPIO_MODE_OUTPUT); \
-    gpio_set_level(RG_GPIO_POWER_CTRL, 1);
+    gpio_set_level(RG_GPIO_POWER_CTRL, 1);                    \
+    printf("POWER HOLD OK\n");
 
 // Video ST7789
 #define RG_SCREEN_DRIVER            0
@@ -73,3 +75,4 @@
 #define RG_GPIO_SND_I2S_WS          GPIO_NUM_16
 #define RG_GPIO_SND_I2S_DATA        GPIO_NUM_7
 #define RG_GPIO_SND_AMP_ENABLE      GPIO_NUM_17
+
