@@ -2,7 +2,6 @@
 #include <freertos/queue.h>
 #include <driver/spi_master.h>
 #include <driver/gpio.h>
-#include <driver/ledc.h>
 
 static spi_device_handle_t spi_dev;
 static QueueHandle_t spi_transactions;
@@ -114,14 +113,14 @@ static void spi_init(void)
         .quadhd_io_num = -1,
     };
 
-const spi_device_interface_config_t devcfg = {
-    .clock_speed_hz = RG_SCREEN_SPEED,
-    .mode = 0,
-    .spics_io_num = -1,                  // ⬅️ PAS RG_GPIO_LCD_CS
-    .queue_size = SPI_TRANSACTION_COUNT,
-    .pre_cb = &spi_pre_transfer_cb,
-    .flags = SPI_DEVICE_NO_DUMMY,
-};
+    const spi_device_interface_config_t devcfg = {
+        .clock_speed_hz = RG_SCREEN_SPEED,
+        .mode = 0,
+        .spics_io_num = -1,
+        .queue_size = SPI_TRANSACTION_COUNT,
+        .pre_cb = &spi_pre_transfer_cb,
+        .flags = SPI_DEVICE_NO_DUMMY,
+    };
 
     esp_err_t ret;
 
@@ -147,17 +146,14 @@ static void spi_deinit(void)
 
 static void lcd_set_backlight(float percent)
 {
-    float level = RG_MIN(RG_MAX(percent / 100.f, 0), 1.f);
-    int error_code = 0;
-
 #if defined(RG_GPIO_LCD_BCKL)
-    error_code = ledc_set_fade_time_and_start(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0x1FFF * level, 50, 0);
+    float level = RG_MIN(RG_MAX(percent / 100.f, 0), 1.f);
+    int value = (level > 0.f) ? 0 : 1; // HU-086 backlight is active LOW
+    gpio_set_level(RG_GPIO_LCD_BCKL, value);
+    RG_LOGI("backlight set to %d%%\n", (int)(100 * level));
+#else
+    RG_UNUSED(percent);
 #endif
-
-    if (error_code)
-        RG_LOGE("failed setting backlight to %d%% (0x%02X)\n", (int)(100 * level), error_code);
-    else
-        RG_LOGI("backlight set to %d%%\n", (int)(100 * level));
 }
 
 static void lcd_set_window(int left, int top, int width, int height)
@@ -180,19 +176,18 @@ static void lcd_set_window(int left, int top, int width, int height)
         bottom = display.screen.real_height - 1;
 
 // Offsets HU-086 (ST7789)
-const int X_OFFSET = 0;
-const int Y_OFFSET = 80;
+    const int X_OFFSET = 0;
+    const int Y_OFFSET = 80;
 
-ILI9341_CMD(0x2A,
-    (left + X_OFFSET) >> 8, (left + X_OFFSET) & 0xff,
-    (right + X_OFFSET) >> 8, (right + X_OFFSET) & 0xff
-);
+    ILI9341_CMD(0x2A,
+               (left + X_OFFSET) >> 8, (left + X_OFFSET) & 0xff,
+               (right + X_OFFSET) >> 8, (right + X_OFFSET) & 0xff);
 
-ILI9341_CMD(0x2B,
-    (top + Y_OFFSET) >> 8, (top + Y_OFFSET) & 0xff,
-    (bottom + Y_OFFSET) >> 8, (bottom + Y_OFFSET) & 0xff
-);
-    ILI9341_CMD(0x2C);                                                     // Memory write
+    ILI9341_CMD(0x2B,
+               (top + Y_OFFSET) >> 8, (top + Y_OFFSET) & 0xff,
+               (bottom + Y_OFFSET) >> 8, (bottom + Y_OFFSET) & 0xff);
+
+    ILI9341_CMD(0x2C); // Memory write
 }
 
 
@@ -218,9 +213,6 @@ static void lcd_sync(void)
 static void lcd_init(void)
 {
 #ifdef RG_GPIO_LCD_BCKL
-    // Désactive le PWM et force le BL comme en Arduino
-    ledc_stop(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
-
     gpio_reset_pin(RG_GPIO_LCD_BCKL);
     gpio_set_direction(RG_GPIO_LCD_BCKL, GPIO_MODE_OUTPUT);
 
