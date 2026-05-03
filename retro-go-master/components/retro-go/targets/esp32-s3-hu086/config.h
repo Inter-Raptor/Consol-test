@@ -28,6 +28,10 @@
 #define RG_SCREEN_ROTATION             1
 #define RG_SCREEN_RGB_BGR              1   // Arduino_GFX = true
 
+// ST7789 address offsets (HU-086 panel uses full 240x320 area)
+#define RG_SCREEN_OFFSET_X            0
+#define RG_SCREEN_OFFSET_Y            0
+
 // Marges = 0
 #define RG_SCREEN_VISIBLE_AREA         {0, 0, 0, 0}
 #define RG_SCREEN_SAFE_AREA            {0, 0, 0, 0}

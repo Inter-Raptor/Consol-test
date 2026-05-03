@@ -161,14 +161,15 @@ static void lcd_set_window(int left, int top, int width, int height)
     if (width < 1) width = 1;
     if (height < 1) height = 1;
 
-    // Offsets HU-086 (ST7789)
-    const int X_OFFSET = 0;
-    const int Y_OFFSET = 80;
-    const int PANEL_WIDTH = 240;
-    const int PANEL_HEIGHT = 320;
+#ifndef RG_SCREEN_OFFSET_X
+#define RG_SCREEN_OFFSET_X 0
+#endif
+#ifndef RG_SCREEN_OFFSET_Y
+#define RG_SCREEN_OFFSET_Y 0
+#endif
 
-    int x1 = left + X_OFFSET;
-    int y1 = top + Y_OFFSET;
+    int x1 = left + RG_SCREEN_OFFSET_X;
+    int y1 = top + RG_SCREEN_OFFSET_Y;
     int x2 = x1 + width - 1;
     int y2 = y1 + height - 1;
 
@@ -177,8 +178,8 @@ static void lcd_set_window(int left, int top, int width, int height)
     if (x2 < x1) x2 = x1;
     if (y2 < y1) y2 = y1;
 
-    if (x2 >= PANEL_WIDTH) x2 = PANEL_WIDTH - 1;
-    if (y2 >= PANEL_HEIGHT) y2 = PANEL_HEIGHT - 1;
+    if (x2 >= display.screen.real_width) x2 = display.screen.real_width - 1;
+    if (y2 >= display.screen.real_height) y2 = display.screen.real_height - 1;
 
     ILI9341_CMD(0x2A, x1 >> 8, x1 & 0xff, x2 >> 8, x2 & 0xff);
     ILI9341_CMD(0x2B, y1 >> 8, y1 & 0xff, y2 >> 8, y2 & 0xff);
