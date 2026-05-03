@@ -158,36 +158,31 @@ static void lcd_set_backlight(float percent)
 
 static void lcd_set_window(int left, int top, int width, int height)
 {
-    // Clamp pour éviter toute coordonnée ou taille invalide
-    if (width < 1)  width  = 1;
+    if (width < 1) width = 1;
     if (height < 1) height = 1;
 
-    int right  = left + width  - 1;
-    int bottom = top  + height - 1;
-
-    if (left   < 0) left   = 0;
-    if (top    < 0) top    = 0;
-    if (right  < left)  right  = left;
-    if (bottom < top)   bottom = top;
-
-    if (right >= display.screen.real_width)
-        right = display.screen.real_width - 1;
-    if (bottom >= display.screen.real_height)
-        bottom = display.screen.real_height - 1;
-
-// Offsets HU-086 (ST7789)
+    // Offsets HU-086 (ST7789)
     const int X_OFFSET = 0;
     const int Y_OFFSET = 80;
+    const int PANEL_WIDTH = 240;
+    const int PANEL_HEIGHT = 320;
 
-    ILI9341_CMD(0x2A,
-               (left + X_OFFSET) >> 8, (left + X_OFFSET) & 0xff,
-               (right + X_OFFSET) >> 8, (right + X_OFFSET) & 0xff);
+    int x1 = left + X_OFFSET;
+    int y1 = top + Y_OFFSET;
+    int x2 = x1 + width - 1;
+    int y2 = y1 + height - 1;
 
-    ILI9341_CMD(0x2B,
-               (top + Y_OFFSET) >> 8, (top + Y_OFFSET) & 0xff,
-               (bottom + Y_OFFSET) >> 8, (bottom + Y_OFFSET) & 0xff);
+    if (x1 < 0) x1 = 0;
+    if (y1 < 0) y1 = 0;
+    if (x2 < x1) x2 = x1;
+    if (y2 < y1) y2 = y1;
 
-    ILI9341_CMD(0x2C); // Memory write
+    if (x2 >= PANEL_WIDTH) x2 = PANEL_WIDTH - 1;
+    if (y2 >= PANEL_HEIGHT) y2 = PANEL_HEIGHT - 1;
+
+    ILI9341_CMD(0x2A, x1 >> 8, x1 & 0xff, x2 >> 8, x2 & 0xff);
+    ILI9341_CMD(0x2B, y1 >> 8, y1 & 0xff, y2 >> 8, y2 & 0xff);
+    ILI9341_CMD(0x2C);
 }
 
 
