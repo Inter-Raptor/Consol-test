@@ -227,16 +227,16 @@ static inline void write_update(const rg_surface_t *update)
             }
         }
 
-        if (need_update)
-        {
-            int left = display.screen.margins.left + draw_left;
-            int top = display.screen.margins.top + draw_top + y - lines_to_copy;
-            if (top != window_top)
-                lcd_set_window(left, top, draw_width, lines_remaining);
-            lcd_send_buffer(line_buffer, draw_width * lines_to_copy);
-            window_top = top + lines_to_copy;
-            lines_updated += lines_to_copy;
-        }
+if (need_update)
+{
+    int left = display.screen.margins.left + draw_left;
+    int top = display.screen.margins.top + draw_top + y - lines_to_copy;
+    if (top != window_top)
+        lcd_set_window(left, top, draw_width, lines_to_copy);  // ← ICI : lines_to_copy
+    lcd_send_buffer(line_buffer, draw_width * lines_to_copy);
+    window_top = top + lines_to_copy;
+    lines_updated += lines_to_copy;
+}
         else
         {
             // Return unused buffer
@@ -352,10 +352,16 @@ static void display_task(void *arg)
         if (msg.type == RG_TASK_MSG_STOP)
             break;
 
+        if (!msg.dataPtr)
+        {
+            // Message vide / corrompu → on le consomme et on passe
+            rg_task_receive(&msg);
+            continue;
+        }
+
         if (display.changed)
         {
             update_viewport_scaling();
-            // Clear the screen if the viewport doesn't cover the entire screen because garbage could remain on the sides
             if (display.viewport.width < display.screen.width || display.viewport.height < display.screen.height)
             {
                 if (border)
@@ -367,12 +373,11 @@ static void display_task(void *arg)
         }
 
         write_update(msg.dataPtr);
-        // draw_on_screen_display(0, display.screen.height);
         rg_task_receive(&msg);
-
         lcd_sync();
     }
 }
+
 
 void rg_display_force_redraw(void)
 {
@@ -491,7 +496,10 @@ void rg_display_submit(const rg_surface_t *update, uint32_t flags)
 {
     const int64_t time_start = rg_system_timer();
 
-    // Those things should probably be asserted, but this is a new system let's be forgiving...
+    // Sécurité : pas de display_task_queue, pas de surface → on sort
+    if (!display_task_queue)
+        return;
+
     if (!update || !update->data)
         return;
 
@@ -503,11 +511,12 @@ void rg_display_submit(const rg_surface_t *update, uint32_t flags)
         display.changed = true;
     }
 
-    rg_task_send(display_task_queue, &(rg_task_msg_t){.dataPtr = update});
+    rg_task_send(display_task_queue, &(rg_task_msg_t){ .dataPtr = (void *)update });
 
     counters.blockTime += rg_system_timer() - time_start;
     counters.totalFrames++;
 }
+
 
 bool rg_display_sync(bool block)
 {

@@ -1,5 +1,5 @@
-#if defined(RG_TARGET_BRUTZELBOY)
-#include "targets/brutzelboy/config.h"
+#if defined(RG_TARGET_ESP32_S3_HU086)
+#include "targets/esp32-s3-hu086/config.h"
 #elif defined(RG_TARGET_ODROID_GO)
 #include "targets/odroid-go/config.h"
 #elif defined(RG_TARGET_MRGC_G32)
