@@ -4,10 +4,8 @@
 #include <driver/gpio.h>
 
 static spi_device_handle_t spi_dev;
-static QueueHandle_t spi_transactions;
 static QueueHandle_t spi_buffers;
 
-#define SPI_TRANSACTION_COUNT (10)
 #define SPI_BUFFER_COUNT      (5)
 #define SPI_BUFFER_LENGTH     (LCD_BUFFER_LENGTH * 2)
 
@@ -37,35 +35,25 @@ static inline void spi_queue_transaction(const void *data, size_t length, uint32
     if (!data || !length)
         return;
 
-    spi_transaction_t *t;
-    xQueueReceive(spi_transactions, &t, portMAX_DELAY);
-
-    *t = (spi_transaction_t){
+    spi_transaction_t t = {
         .tx_buffer = NULL,
-        .length = length * 8, // In bits
+        .length = length * 8,
         .user = (void *)type,
         .flags = 0,
     };
 
-    if (type & 2)
+    if (length < 5)
     {
-        t->tx_buffer = data;
-    }
-    else if (length < 5)
-    {
-        memcpy(t->tx_data, data, length);
-        t->flags = SPI_TRANS_USE_TXDATA;
+        memcpy(t.tx_data, data, length);
+        t.flags = SPI_TRANS_USE_TXDATA;
     }
     else
     {
-        t->tx_buffer = memcpy(spi_take_buffer(), data, length);
-        t->user = (void *)(type | 2);
+        t.tx_buffer = data;
     }
 
-    if (spi_device_queue_trans(spi_dev, t, pdMS_TO_TICKS(2500)) != ESP_OK)
-    {
+    if (spi_device_polling_transmit(spi_dev, &t) != ESP_OK)
         RG_PANIC("display");
-    }
 }
 
 IRAM_ATTR
@@ -75,29 +63,9 @@ static void spi_pre_transfer_cb(spi_transaction_t *t)
     gpio_set_level(RG_GPIO_LCD_DC, (int)t->user & 1);
 }
 
-IRAM_ATTR
-static void spi_task(void *arg)
-{
-    spi_transaction_t *t;
-
-    while (spi_device_get_trans_result(spi_dev, &t, portMAX_DELAY) == ESP_OK)
-    {
-        if ((int)t->user & 2)
-            spi_give_buffer((uint16_t *)t->tx_buffer);
-        xQueueSend(spi_transactions, &t, portMAX_DELAY);
-    }
-}
-
 static void spi_init(void)
 {
-    spi_transactions = xQueueCreate(SPI_TRANSACTION_COUNT, sizeof(spi_transaction_t *));
     spi_buffers = xQueueCreate(SPI_BUFFER_COUNT, sizeof(uint16_t *));
-
-    while (uxQueueSpacesAvailable(spi_transactions))
-    {
-        void *trans = malloc(sizeof(spi_transaction_t));
-        xQueueSend(spi_transactions, &trans, portMAX_DELAY);
-    }
 
     while (uxQueueSpacesAvailable(spi_buffers))
     {
@@ -117,7 +85,7 @@ static void spi_init(void)
         .clock_speed_hz = RG_SCREEN_SPEED,
         .mode = 0,
         .spics_io_num = -1,
-        .queue_size = SPI_TRANSACTION_COUNT,
+        .queue_size = 1,
         .pre_cb = &spi_pre_transfer_cb,
         .flags = SPI_DEVICE_NO_DUMMY,
     };
@@ -131,7 +99,6 @@ static void spi_init(void)
     ret = spi_bus_add_device(RG_SCREEN_HOST, &devcfg, &spi_dev);
     RG_ASSERT(ret == ESP_OK, "spi_bus_add_device failed.");
 
-    rg_task_create("rg_spi", &spi_task, NULL, 1.5 * 1024, RG_TASK_PRIORITY_7, 1);
 }
 
 static void spi_deinit(void)
