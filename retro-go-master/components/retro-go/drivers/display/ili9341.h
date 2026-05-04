@@ -2,13 +2,10 @@
 #include <freertos/queue.h>
 #include <driver/spi_master.h>
 #include <driver/gpio.h>
-#include <driver/ledc.h>
 
 static spi_device_handle_t spi_dev;
-static QueueHandle_t spi_transactions;
 static QueueHandle_t spi_buffers;
 
-#define SPI_TRANSACTION_COUNT (10)
 #define SPI_BUFFER_COUNT      (5)
 #define SPI_BUFFER_LENGTH     (LCD_BUFFER_LENGTH * 2)
 
@@ -38,35 +35,39 @@ static inline void spi_queue_transaction(const void *data, size_t length, uint32
     if (!data || !length)
         return;
 
-    spi_transaction_t *t;
-    xQueueReceive(spi_transactions, &t, portMAX_DELAY);
-
-    *t = (spi_transaction_t){
+    spi_transaction_t t = {
         .tx_buffer = NULL,
-        .length = length * 8, // In bits
+        .length = length * 8,
         .user = (void *)type,
         .flags = 0,
     };
 
+    uint16_t *temp = NULL;
+
     if (type & 2)
     {
-        t->tx_buffer = data;
+        t.tx_buffer = data;
     }
     else if (length < 5)
     {
-        memcpy(t->tx_data, data, length);
-        t->flags = SPI_TRANS_USE_TXDATA;
+        memcpy(t.tx_data, data, length);
+        t.flags = SPI_TRANS_USE_TXDATA;
     }
     else
     {
-        t->tx_buffer = memcpy(spi_take_buffer(), data, length);
-        t->user = (void *)(type | 2);
+        temp = spi_take_buffer();
+        memcpy(temp, data, length);
+        t.tx_buffer = temp;
     }
 
-    if (spi_device_queue_trans(spi_dev, t, pdMS_TO_TICKS(2500)) != ESP_OK)
-    {
+    if (spi_device_polling_transmit(spi_dev, &t) != ESP_OK)
         RG_PANIC("display");
-    }
+
+    if (temp)
+        spi_give_buffer(temp);
+
+    if (type & 2)
+        spi_give_buffer((uint16_t *)data);
 }
 
 IRAM_ATTR
@@ -76,29 +77,9 @@ static void spi_pre_transfer_cb(spi_transaction_t *t)
     gpio_set_level(RG_GPIO_LCD_DC, (int)t->user & 1);
 }
 
-IRAM_ATTR
-static void spi_task(void *arg)
-{
-    spi_transaction_t *t;
-
-    while (spi_device_get_trans_result(spi_dev, &t, portMAX_DELAY) == ESP_OK)
-    {
-        if ((int)t->user & 2)
-            spi_give_buffer((uint16_t *)t->tx_buffer);
-        xQueueSend(spi_transactions, &t, portMAX_DELAY);
-    }
-}
-
 static void spi_init(void)
 {
-    spi_transactions = xQueueCreate(SPI_TRANSACTION_COUNT, sizeof(spi_transaction_t *));
     spi_buffers = xQueueCreate(SPI_BUFFER_COUNT, sizeof(uint16_t *));
-
-    while (uxQueueSpacesAvailable(spi_transactions))
-    {
-        void *trans = malloc(sizeof(spi_transaction_t));
-        xQueueSend(spi_transactions, &trans, portMAX_DELAY);
-    }
 
     while (uxQueueSpacesAvailable(spi_buffers))
     {
@@ -114,14 +95,14 @@ static void spi_init(void)
         .quadhd_io_num = -1,
     };
 
-const spi_device_interface_config_t devcfg = {
-    .clock_speed_hz = RG_SCREEN_SPEED,
-    .mode = 0,
-    .spics_io_num = -1,                  // ⬅️ PAS RG_GPIO_LCD_CS
-    .queue_size = SPI_TRANSACTION_COUNT,
-    .pre_cb = &spi_pre_transfer_cb,
-    .flags = SPI_DEVICE_NO_DUMMY,
-};
+    const spi_device_interface_config_t devcfg = {
+        .clock_speed_hz = RG_SCREEN_SPEED,
+        .mode = 0,
+        .spics_io_num = -1,
+        .queue_size = 1,
+        .pre_cb = &spi_pre_transfer_cb,
+        .flags = SPI_DEVICE_NO_DUMMY,
+    };
 
     esp_err_t ret;
 
@@ -132,7 +113,6 @@ const spi_device_interface_config_t devcfg = {
     ret = spi_bus_add_device(RG_SCREEN_HOST, &devcfg, &spi_dev);
     RG_ASSERT(ret == ESP_OK, "spi_bus_add_device failed.");
 
-    rg_task_create("rg_spi", &spi_task, NULL, 1.5 * 1024, RG_TASK_PRIORITY_7, 1);
 }
 
 static void spi_deinit(void)
@@ -147,52 +127,44 @@ static void spi_deinit(void)
 
 static void lcd_set_backlight(float percent)
 {
-    float level = RG_MIN(RG_MAX(percent / 100.f, 0), 1.f);
-    int error_code = 0;
-
 #if defined(RG_GPIO_LCD_BCKL)
-    error_code = ledc_set_fade_time_and_start(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0x1FFF * level, 50, 0);
+    float level = RG_MIN(RG_MAX(percent / 100.f, 0), 1.f);
+    int value = (level > 0.f) ? 0 : 1; // HU-086 backlight is active LOW
+    gpio_set_level(RG_GPIO_LCD_BCKL, value);
+    RG_LOGI("backlight set to %d%%\n", (int)(100 * level));
+#else
+    RG_UNUSED(percent);
 #endif
-
-    if (error_code)
-        RG_LOGE("failed setting backlight to %d%% (0x%02X)\n", (int)(100 * level), error_code);
-    else
-        RG_LOGI("backlight set to %d%%\n", (int)(100 * level));
 }
 
 static void lcd_set_window(int left, int top, int width, int height)
 {
-    // Clamp pour éviter toute coordonnée ou taille invalide
-    if (width < 1)  width  = 1;
+    if (width < 1) width = 1;
     if (height < 1) height = 1;
 
-    int right  = left + width  - 1;
-    int bottom = top  + height - 1;
+#ifndef RG_SCREEN_OFFSET_X
+#define RG_SCREEN_OFFSET_X 0
+#endif
+#ifndef RG_SCREEN_OFFSET_Y
+#define RG_SCREEN_OFFSET_Y 0
+#endif
 
-    if (left   < 0) left   = 0;
-    if (top    < 0) top    = 0;
-    if (right  < left)  right  = left;
-    if (bottom < top)   bottom = top;
+    int x1 = left + RG_SCREEN_OFFSET_X;
+    int y1 = top + RG_SCREEN_OFFSET_Y;
+    int x2 = x1 + width - 1;
+    int y2 = y1 + height - 1;
 
-    if (right >= display.screen.real_width)
-        right = display.screen.real_width - 1;
-    if (bottom >= display.screen.real_height)
-        bottom = display.screen.real_height - 1;
+    if (x1 < 0) x1 = 0;
+    if (y1 < 0) y1 = 0;
+    if (x2 < x1) x2 = x1;
+    if (y2 < y1) y2 = y1;
 
-// Offsets HU-086 (ST7789)
-const int X_OFFSET = 0;
-const int Y_OFFSET = 80;
+    if (x2 >= display.screen.real_width) x2 = display.screen.real_width - 1;
+    if (y2 >= display.screen.real_height) y2 = display.screen.real_height - 1;
 
-ILI9341_CMD(0x2A,
-    (left + X_OFFSET) >> 8, (left + X_OFFSET) & 0xff,
-    (right + X_OFFSET) >> 8, (right + X_OFFSET) & 0xff
-);
-
-ILI9341_CMD(0x2B,
-    (top + Y_OFFSET) >> 8, (top + Y_OFFSET) & 0xff,
-    (bottom + Y_OFFSET) >> 8, (bottom + Y_OFFSET) & 0xff
-);
-    ILI9341_CMD(0x2C);                                                     // Memory write
+    ILI9341_CMD(0x2A, x1 >> 8, x1 & 0xff, x2 >> 8, x2 & 0xff);
+    ILI9341_CMD(0x2B, y1 >> 8, y1 & 0xff, y2 >> 8, y2 & 0xff);
+    ILI9341_CMD(0x2C);
 }
 
 
@@ -218,9 +190,6 @@ static void lcd_sync(void)
 static void lcd_init(void)
 {
 #ifdef RG_GPIO_LCD_BCKL
-    // Désactive le PWM et force le BL comme en Arduino
-    ledc_stop(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
-
     gpio_reset_pin(RG_GPIO_LCD_BCKL);
     gpio_set_direction(RG_GPIO_LCD_BCKL, GPIO_MODE_OUTPUT);
 
@@ -251,6 +220,25 @@ static void lcd_init(void)
     RG_SCREEN_INIT();
 #else
     #warning "LCD init sequence is not defined for this device!"
+#endif
+
+#ifdef RG_SCREEN_BOOT_TEST
+    for (int pass = 0; pass < 3; ++pass)
+    {
+        const uint16_t color = (pass == 0) ? 0xF800 : (pass == 1) ? 0x07E0 : 0x001F;
+        lcd_set_window(0, 0, display.screen.real_width, display.screen.real_height);
+        size_t pixels = display.screen.real_width * display.screen.real_height;
+        while (pixels)
+        {
+            size_t chunk = RG_MIN(pixels, LCD_BUFFER_LENGTH);
+            uint16_t *buf = lcd_get_buffer(chunk);
+            for (size_t i = 0; i < chunk; ++i)
+                buf[i] = color;
+            lcd_send_buffer(buf, chunk);
+            pixels -= chunk;
+        }
+        rg_usleep(120 * 1000);
+    }
 #endif
 
 }

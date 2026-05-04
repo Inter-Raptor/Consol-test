@@ -14,10 +14,11 @@
 
 #define RG_SCREEN_DRIVER               0
 #define RG_SCREEN_HOST                 SPI2_HOST
-#define RG_SCREEN_SPEED                SPI_MASTER_FREQ_40M
+#define RG_SCREEN_SPEED                SPI_MASTER_FREQ_20M
 
 // Backlight actif LOW (comme Arduino)
 #define RG_SCREEN_BACKLIGHT            80
+#define RG_SCREEN_BOOT_TEST            1
 // PAS de RG_GPIO_LCD_BCKL_INVERT → on force le BL dans lcd_init()
 
 // Dimensions PHYSIQUES du panneau ST7789
@@ -25,8 +26,12 @@
 #define RG_SCREEN_HEIGHT               320
 
 // Rotation logique Retro-Go
-#define RG_SCREEN_ROTATION             1
-#define RG_SCREEN_RGB_BGR              1   // Arduino_GFX = true
+#define RG_SCREEN_ROTATION             0
+#define RG_SCREEN_RGB_BGR              0   // Arduino_GFX = true
+
+// ST7789 address offsets (HU-086 panel uses full 240x320 area)
+#define RG_SCREEN_OFFSET_X            0
+#define RG_SCREEN_OFFSET_Y            0
 
 // Marges = 0
 #define RG_SCREEN_VISIBLE_AREA         {0, 0, 0, 0}
@@ -35,14 +40,14 @@
 // Séquence d'init HU-086 (celle validée par Arduino)
 #define RG_SCREEN_INIT() \
     ILI9341_CMD(0x01); \
-    rg_usleep(120000); \
+    rg_usleep(150000); \
     ILI9341_CMD(0x11); \
-    rg_usleep(120000); \
-    ILI9341_CMD(0x36, 0xA0); /* rotation 1 + BGR */ \
+    rg_usleep(150000); \
     ILI9341_CMD(0x3A, 0x55); \
-    ILI9341_CMD(0x21); \
+    ILI9341_CMD(0x36, 0x00); /* match Arduino_GFX baseline */ \
+    ILI9341_CMD(0x21);       /* invertDisplay(true) */ \
     ILI9341_CMD(0x29); \
-    rg_usleep(120000);
+    rg_usleep(150000);
 
 // LCD pins (confirmés par ton test)
 #define RG_GPIO_LCD_MISO               GPIO_NUM_NC
