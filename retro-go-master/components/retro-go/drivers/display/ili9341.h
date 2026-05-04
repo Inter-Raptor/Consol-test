@@ -222,6 +222,25 @@ static void lcd_init(void)
     #warning "LCD init sequence is not defined for this device!"
 #endif
 
+#ifdef RG_SCREEN_BOOT_TEST
+    for (int pass = 0; pass < 3; ++pass)
+    {
+        const uint16_t color = (pass == 0) ? 0xF800 : (pass == 1) ? 0x07E0 : 0x001F;
+        lcd_set_window(0, 0, display.screen.real_width, display.screen.real_height);
+        size_t pixels = display.screen.real_width * display.screen.real_height;
+        while (pixels)
+        {
+            size_t chunk = RG_MIN(pixels, LCD_BUFFER_LENGTH);
+            uint16_t *buf = lcd_get_buffer(chunk);
+            for (size_t i = 0; i < chunk; ++i)
+                buf[i] = color;
+            lcd_send_buffer(buf, chunk);
+            pixels -= chunk;
+        }
+        rg_usleep(120 * 1000);
+    }
+#endif
+
 }
 
 static void lcd_deinit(void)
