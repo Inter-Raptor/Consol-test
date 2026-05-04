@@ -42,18 +42,32 @@ static inline void spi_queue_transaction(const void *data, size_t length, uint32
         .flags = 0,
     };
 
-    if (length < 5)
+    uint16_t *temp = NULL;
+
+    if (type & 2)
+    {
+        t.tx_buffer = data;
+    }
+    else if (length < 5)
     {
         memcpy(t.tx_data, data, length);
         t.flags = SPI_TRANS_USE_TXDATA;
     }
     else
     {
-        t.tx_buffer = data;
+        temp = spi_take_buffer();
+        memcpy(temp, data, length);
+        t.tx_buffer = temp;
     }
 
     if (spi_device_polling_transmit(spi_dev, &t) != ESP_OK)
         RG_PANIC("display");
+
+    if (temp)
+        spi_give_buffer(temp);
+
+    if (type & 2)
+        spi_give_buffer((uint16_t *)data);
 }
 
 IRAM_ATTR
