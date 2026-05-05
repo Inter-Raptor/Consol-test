@@ -60,6 +60,10 @@ static inline void spi_queue_transaction(const void *data, size_t length, uint32
         t.tx_buffer = temp;
     }
 
+    // Polling transmit path does not reliably invoke pre_cb on all IDF paths,
+    // so drive D/C explicitly here.
+    gpio_set_level(RG_GPIO_LCD_DC, type & 1);
+
     if (spi_device_polling_transmit(spi_dev, &t) != ESP_OK)
         RG_PANIC("display");
 
