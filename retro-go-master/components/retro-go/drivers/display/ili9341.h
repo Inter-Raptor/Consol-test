@@ -4,8 +4,10 @@
 #include <driver/gpio.h>
 
 static spi_device_handle_t spi_dev;
+static QueueHandle_t spi_transactions;
 static QueueHandle_t spi_buffers;
 
+#define SPI_TRANSACTION_COUNT (10)
 #define SPI_BUFFER_COUNT      (5)
 #define SPI_BUFFER_LENGTH     (LCD_BUFFER_LENGTH * 2)
 
@@ -35,55 +37,64 @@ static inline void spi_queue_transaction(const void *data, size_t length, uint32
     if (!data || !length)
         return;
 
-    spi_transaction_t t = {
+    spi_transaction_t *t;
+    xQueueReceive(spi_transactions, &t, portMAX_DELAY);
+
+    *t = (spi_transaction_t){
         .tx_buffer = NULL,
         .length = length * 8,
         .user = (void *)type,
         .flags = 0,
     };
 
-    uint16_t *temp = NULL;
-
     if (type & 2)
     {
-        t.tx_buffer = data;
+        t->tx_buffer = data;
     }
     else if (length < 5)
     {
-        memcpy(t.tx_data, data, length);
-        t.flags = SPI_TRANS_USE_TXDATA;
+        memcpy(t->tx_data, data, length);
+        t->flags = SPI_TRANS_USE_TXDATA;
     }
     else
     {
-        temp = spi_take_buffer();
-        memcpy(temp, data, length);
-        t.tx_buffer = temp;
+        t->tx_buffer = memcpy(spi_take_buffer(), data, length);
+        t->user = (void *)(type | 2);
     }
 
-    // Polling transmit path does not reliably invoke pre_cb on all IDF paths,
-    // so drive D/C explicitly here.
-    gpio_set_level(RG_GPIO_LCD_DC, type & 1);
-
-    if (spi_device_polling_transmit(spi_dev, &t) != ESP_OK)
+    if (spi_device_queue_trans(spi_dev, t, pdMS_TO_TICKS(2500)) != ESP_OK)
         RG_PANIC("display");
-
-    if (temp)
-        spi_give_buffer(temp);
-
-    if (type & 2)
-        spi_give_buffer((uint16_t *)data);
 }
 
 IRAM_ATTR
 static void spi_pre_transfer_cb(spi_transaction_t *t)
 {
-    // Set the data/command line accordingly
     gpio_set_level(RG_GPIO_LCD_DC, (int)t->user & 1);
+}
+
+IRAM_ATTR
+static void spi_task(void *arg)
+{
+    spi_transaction_t *t;
+
+    while (spi_device_get_trans_result(spi_dev, &t, portMAX_DELAY) == ESP_OK)
+    {
+        if ((int)t->user & 2)
+            spi_give_buffer((uint16_t *)t->tx_buffer);
+        xQueueSend(spi_transactions, &t, portMAX_DELAY);
+    }
 }
 
 static void spi_init(void)
 {
+    spi_transactions = xQueueCreate(SPI_TRANSACTION_COUNT, sizeof(spi_transaction_t *));
     spi_buffers = xQueueCreate(SPI_BUFFER_COUNT, sizeof(uint16_t *));
+
+    while (uxQueueSpacesAvailable(spi_transactions))
+    {
+        void *trans = malloc(sizeof(spi_transaction_t));
+        xQueueSend(spi_transactions, &trans, portMAX_DELAY);
+    }
 
     while (uxQueueSpacesAvailable(spi_buffers))
     {
@@ -103,30 +114,19 @@ static void spi_init(void)
         .clock_speed_hz = RG_SCREEN_SPEED,
         .mode = 0,
         .spics_io_num = -1,
-        .queue_size = 1,
+        .queue_size = SPI_TRANSACTION_COUNT,
         .pre_cb = &spi_pre_transfer_cb,
         .flags = SPI_DEVICE_NO_DUMMY,
     };
 
     esp_err_t ret;
-
-    // Initialize the SPI bus
     ret = spi_bus_initialize(RG_SCREEN_HOST, &buscfg, SPI_DMA_CH_AUTO);
     RG_ASSERT(ret == ESP_OK || ret == ESP_ERR_INVALID_STATE, "spi_bus_initialize failed.");
 
     ret = spi_bus_add_device(RG_SCREEN_HOST, &devcfg, &spi_dev);
     RG_ASSERT(ret == ESP_OK, "spi_bus_add_device failed.");
 
-}
-
-static void spi_deinit(void)
-{
-    // When transactions are still in flight, spi_bus_remove_device fails and spi_bus_free then crashes.
-    // The real solution would be to wait for transactions to be done, but this is simpler for now...
-    if (spi_bus_remove_device(spi_dev) == ESP_OK)
-        spi_bus_free(RG_SCREEN_HOST);
-    else
-        RG_LOGE("Failed to properly terminate SPI driver!");
+    rg_task_create("rg_spi", &spi_task, NULL, 1.5 * 1024, RG_TASK_PRIORITY_7, 1);
 }
 
 static void lcd_set_backlight(float percent)
