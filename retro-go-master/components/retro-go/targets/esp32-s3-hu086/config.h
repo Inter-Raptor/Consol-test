@@ -12,7 +12,7 @@
 
 // --- DISPLAY HU-086 V1.5 : ST7789 240x320 en SPI2 ---
 
-#define RG_SCREEN_DRIVER               2
+#define RG_SCREEN_DRIVER               0
 #define RG_SCREEN_HOST                 SPI2_HOST
 #define RG_SCREEN_SPEED                SPI_MASTER_FREQ_20M
 #define RG_SCREEN_SPI_MODE             3
