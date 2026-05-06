@@ -30,6 +30,7 @@
 
 #define RG_SCREEN_OFFSET_X             0
 #define RG_SCREEN_OFFSET_Y             0
+#define RG_SCREEN_BOOT_TEST            1
 
 // Marges = 0
 #define RG_SCREEN_VISIBLE_AREA         {0, 0, 0, 0}

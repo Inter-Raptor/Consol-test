@@ -257,6 +257,25 @@ static void lcd_init(void)
 #ifdef RG_SCREEN_INIT
     // Target init sequence defined in config.h
     RG_SCREEN_INIT();
+
+#ifdef RG_SCREEN_BOOT_TEST
+    // Diagnostic visuel au boot: si visible, le bus SPI et l'init LCD fonctionnent
+    for (int pass = 0; pass < 3; ++pass)
+    {
+        uint16_t color = (pass == 0) ? 0x00F8 : (pass == 1) ? 0xE007 : 0x1F00; // R, G, B (565 BE)
+        lcd_set_window(0, 0, RG_SCREEN_WIDTH, RG_SCREEN_HEIGHT);
+        int remaining = RG_SCREEN_WIDTH * RG_SCREEN_HEIGHT;
+        while (remaining > 0)
+        {
+            int chunk = RG_MIN(remaining, LCD_BUFFER_LENGTH);
+            uint16_t *buf = spi_take_buffer();
+            for (int i = 0; i < chunk; ++i) buf[i] = color;
+            spi_queue_transaction(buf, chunk * sizeof(uint16_t), 3);
+            remaining -= chunk;
+        }
+        rg_usleep(120000);
+    }
+#endif
 #else
     #warning "LCD init sequence is not defined for this device!"
 #endif
