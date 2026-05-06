@@ -12,7 +12,7 @@
 
 // --- DISPLAY HU-086 V1.5 : ST7789 240x320 en SPI2 ---
 
-#define RG_SCREEN_DRIVER               0
+#define RG_SCREEN_DRIVER               2
 #define RG_SCREEN_HOST                 SPI2_HOST
 #define RG_SCREEN_SPEED                SPI_MASTER_FREQ_40M
 
@@ -25,14 +25,17 @@
 #define RG_SCREEN_HEIGHT               320
 
 // Rotation logique Retro-Go
-#define RG_SCREEN_ROTATION             1
+#define RG_SCREEN_ROTATE               1
 #define RG_SCREEN_RGB_BGR              1   // Arduino_GFX = true
+
+#define RG_SCREEN_OFFSET_X             0
+#define RG_SCREEN_OFFSET_Y             0
 
 // Marges = 0
 #define RG_SCREEN_VISIBLE_AREA         {0, 0, 0, 0}
 #define RG_SCREEN_SAFE_AREA            {0, 0, 0, 0}
 
-// Séquence d'init HU-086 (celle validée par Arduino)
+// Séquence d'init HU-086 (même logique que le .ino fonctionnel)
 #define RG_SCREEN_INIT() \
     ILI9341_CMD(0x01); \
     rg_usleep(120000); \

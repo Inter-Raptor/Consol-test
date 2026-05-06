@@ -12,7 +12,16 @@
 #define C_YELLOW  0xFFE0
 #define C_CYAN    0x07FF
 
-// LCD ST7789
+// ==========================
+// Configuration écran
+// Change DISPLAY_DRIVER pour tester facilement un autre pilote
+// ==========================
+#define DISPLAY_DRIVER_ST7789 0
+#define DISPLAY_DRIVER_ILI9341 1
+#ifndef DISPLAY_DRIVER
+#define DISPLAY_DRIVER DISPLAY_DRIVER_ST7789
+#endif
+
 #define TFT_MOSI 39
 #define TFT_CS   -1
 #define TFT_DC   38
@@ -21,7 +30,14 @@
 #define TFT_BL   42
 
 Arduino_DataBus *bus = new Arduino_ESP32SPI(TFT_DC, TFT_CS, TFT_SCK, TFT_MOSI, -1);
-Arduino_GFX *gfx = new Arduino_ST7789(bus, TFT_RST, 0);
+
+#if DISPLAY_DRIVER == DISPLAY_DRIVER_ILI9341
+// ILI9341 classique (240x320)
+Arduino_GFX *gfx = new Arduino_ILI9341(bus, TFT_RST, 1 /* rotation */, false /* IPS */);
+#else
+// ST7789 (240x320)
+Arduino_GFX *gfx = new Arduino_ST7789(bus, TFT_RST, 0 /* rotation */, true /* IPS */);
+#endif
 
 // SD_MMC 1-bit
 #define SD_CLK 10
