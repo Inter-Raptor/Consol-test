@@ -221,15 +221,19 @@ static void lcd_init(void)
 #ifdef RG_SCREEN_INIT
     // HU-086 : toute la séquence (0x11, 0x36, 0x3A, 0x29, 0x21, etc.)
     // est déjà définie dans RG_SCREEN_INIT de ton config.h
+    RG_LOGI("lcd_init: running RG_SCREEN_INIT\n");
     RG_SCREEN_INIT();
 #else
     #warning "LCD init sequence is not defined for this device!"
 #endif
 
+
 #ifdef RG_SCREEN_BOOT_TEST
+    RG_LOGI("lcd_init: starting boot RGB test\n");
     for (int pass = 0; pass < 3; ++pass)
     {
         const uint16_t color = (pass == 0) ? 0xF800 : (pass == 1) ? 0x07E0 : 0x001F;
+        RG_LOGI("lcd_init: boot test pass=%d color=0x%04X\n", pass, color);
         lcd_set_window(0, 0, display.screen.real_width, display.screen.real_height);
         size_t pixels = display.screen.real_width * display.screen.real_height;
         while (pixels)
