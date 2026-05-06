@@ -117,7 +117,7 @@ static void spi_init(void)
 const spi_device_interface_config_t devcfg = {
     .clock_speed_hz = RG_SCREEN_SPEED,
     .mode = 0,
-    .spics_io_num = RG_GPIO_LCD_CS,
+    .spics_io_num = (RG_GPIO_LCD_CS == GPIO_NUM_NC ? -1 : RG_GPIO_LCD_CS),
     .queue_size = SPI_TRANSACTION_COUNT,
     .pre_cb = &spi_pre_transfer_cb,
     .flags = SPI_DEVICE_NO_DUMMY,
@@ -147,17 +147,18 @@ static void spi_deinit(void)
 
 static void lcd_set_backlight(float percent)
 {
-    float level = RG_MIN(RG_MAX(percent / 100.f, 0), 1.f);
-    int error_code = 0;
-
 #if defined(RG_GPIO_LCD_BCKL)
-    error_code = ledc_set_fade_time_and_start(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0x1FFF * level, 50, 0);
+    // HU086: évite LEDC (non initialisé), contrôle direct GPIO
+    // percent > 0 => écran allumé, percent == 0 => écran éteint
+    const int on = (percent > 0.0f) ? 1 : 0;
+#ifdef RG_GPIO_LCD_BCKL_INVERT
+    gpio_set_level(RG_GPIO_LCD_BCKL, on ? 0 : 1);
+#else
+    gpio_set_level(RG_GPIO_LCD_BCKL, on ? 1 : 0);
 #endif
-
-    if (error_code)
-        RG_LOGE("failed setting backlight to %d%% (0x%02X)\n", (int)(100 * level), error_code);
-    else
-        RG_LOGI("backlight set to %d%%\n", (int)(100 * level));
+#else
+    (void)percent;
+#endif
 }
 
 static void lcd_set_window(int left, int top, int width, int height)
@@ -224,7 +225,6 @@ static void lcd_sync(void)
 static void lcd_init(void)
 {
 #ifdef RG_GPIO_LCD_BCKL
-    ledc_stop(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
     gpio_reset_pin(RG_GPIO_LCD_BCKL);
     gpio_set_direction(RG_GPIO_LCD_BCKL, GPIO_MODE_OUTPUT);
 
