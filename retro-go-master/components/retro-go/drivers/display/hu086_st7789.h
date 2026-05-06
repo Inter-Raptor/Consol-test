@@ -114,9 +114,13 @@ static void spi_init(void)
         .quadhd_io_num = -1,
     };
 
+#ifndef RG_SCREEN_SPI_MODE
+#define RG_SCREEN_SPI_MODE 3
+#endif
+
 const spi_device_interface_config_t devcfg = {
     .clock_speed_hz = RG_SCREEN_SPEED,
-    .mode = 0,
+    .mode = RG_SCREEN_SPI_MODE,
     .spics_io_num = (RG_GPIO_LCD_CS == GPIO_NUM_NC ? -1 : RG_GPIO_LCD_CS),
     .queue_size = SPI_TRANSACTION_COUNT,
     .pre_cb = &spi_pre_transfer_cb,

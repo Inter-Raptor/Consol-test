@@ -14,7 +14,8 @@
 
 #define RG_SCREEN_DRIVER               2
 #define RG_SCREEN_HOST                 SPI2_HOST
-#define RG_SCREEN_SPEED                SPI_MASTER_FREQ_40M
+#define RG_SCREEN_SPEED                SPI_MASTER_FREQ_20M
+#define RG_SCREEN_SPI_MODE             3
 
 // Backlight actif LOW (comme Arduino)
 #define RG_SCREEN_BACKLIGHT            80
