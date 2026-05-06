@@ -254,12 +254,10 @@ static void lcd_init(void)
     gpio_set_level(RG_GPIO_LCD_RST, 1);
     rg_usleep(10 * 1000);
 #endif
-
-    ILI9341_CMD(0x01);       // Reset
-    rg_usleep(5 * 1000);     // Petit délai après reset
-
 #ifdef RG_SCREEN_INIT
-    // Target init sequence defined in config.h
+    // Target init sequence defined in config.h.
+    // NOTE: avoid an extra SWRESET here: config sequence already controls
+    // reset/sleep timing and duplicate reset can cause unstable wake-up.
     RG_SCREEN_INIT();
 
 #ifdef RG_SCREEN_BOOT_TEST
