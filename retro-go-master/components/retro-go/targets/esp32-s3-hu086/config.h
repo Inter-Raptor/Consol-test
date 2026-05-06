@@ -29,7 +29,7 @@
 #define RG_SCREEN_RGB_BGR              1   // Arduino_GFX = true
 
 #define RG_SCREEN_OFFSET_X             0
-#define RG_SCREEN_OFFSET_Y             0
+#define RG_SCREEN_OFFSET_Y             80
 #define RG_SCREEN_BOOT_TEST            1
 
 // Marges = 0
