@@ -12,9 +12,10 @@
 
 // --- DISPLAY HU-086 V1.5 : ST7789 240x320 en SPI2 ---
 
-#define RG_SCREEN_DRIVER               0
+#define RG_SCREEN_DRIVER               2
 #define RG_SCREEN_HOST                 SPI2_HOST
 #define RG_SCREEN_SPEED                SPI_MASTER_FREQ_40M
+#define RG_SCREEN_SPI_MODE             0
 
 // Backlight actif LOW (comme Arduino)
 #define RG_SCREEN_BACKLIGHT            80
@@ -25,23 +26,27 @@
 #define RG_SCREEN_HEIGHT               320
 
 // Rotation logique Retro-Go
-#define RG_SCREEN_ROTATION             1
+#define RG_SCREEN_ROTATE               1
 #define RG_SCREEN_RGB_BGR              1   // Arduino_GFX = true
+
+#define RG_SCREEN_OFFSET_X             0
+#define RG_SCREEN_OFFSET_Y             80
+#define RG_SCREEN_BOOT_TEST            1
 
 // Marges = 0
 #define RG_SCREEN_VISIBLE_AREA         {0, 0, 0, 0}
 #define RG_SCREEN_SAFE_AREA            {0, 0, 0, 0}
 
-// Séquence d'init HU-086 (celle validée par Arduino)
+// Séquence d'init HU-086 (même logique que le .ino fonctionnel)
 #define RG_SCREEN_INIT() \
     ILI9341_CMD(0x01); \
     rg_usleep(120000); \
     ILI9341_CMD(0x11); \
     rg_usleep(120000); \
-    ILI9341_CMD(0x36, 0xA0); /* rotation 1 + BGR */ \
-    ILI9341_CMD(0x3A, 0x55); \
-    ILI9341_CMD(0x21); \
-    ILI9341_CMD(0x29); \
+    ILI9341_CMD(0x36, 0xA0); /* MX + MV + BGR (Arduino mapping) */ \
+    ILI9341_CMD(0x3A, 0x55); /* RGB565 */ \
+    ILI9341_CMD(0x21);       /* Inversion ON */ \
+    ILI9341_CMD(0x29);       /* Display ON */ \
     rg_usleep(120000);
 
 // LCD pins (confirmés par ton test)
