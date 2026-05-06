@@ -152,9 +152,11 @@ static void lcd_set_backlight(float percent)
     // percent > 0 => écran allumé, percent == 0 => écran éteint
     const int on = (percent > 0.0f) ? 1 : 0;
 #ifdef RG_GPIO_LCD_BCKL_INVERT
-    gpio_set_level(RG_GPIO_LCD_BCKL, on ? 0 : 1);
-#else
+    // Active HIGH
     gpio_set_level(RG_GPIO_LCD_BCKL, on ? 1 : 0);
+#else
+    // Active LOW (HU086)
+    gpio_set_level(RG_GPIO_LCD_BCKL, on ? 0 : 1);
 #endif
 #else
     (void)percent;
